@@ -2,8 +2,37 @@ const Book = require("../models/book.model");
 
 exports.listBooks = async (req, res, next) => {
   try {
-    const books = await Book.findAll();
-    res.status(200).json({ total: books.length, data: books });
+    const { q, author, available, page = 1, limit = 10 } = req.query;
+    
+    let books = await Book.findAll();
+
+    if (q) {
+      books = books.filter(b => 
+        b.title.toLowerCase().includes(q.toLowerCase())
+      );
+    }
+    if (author) {
+      books = books.filter(b => 
+        b.author.toLowerCase().includes(author.toLowerCase())
+      );
+    }
+    if (available !== undefined) {
+      books = books.filter(b => b.available === (available === 'true'));
+    }
+
+    const total = books.length;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, parseInt(limit));
+    const offset = (pageNum - 1) * limitNum;
+    
+    const paginatedBooks = books.slice(offset, offset + limitNum);
+
+    res.status(200).json({
+      page: pageNum,
+      limit: limitNum,
+      total,
+      data: paginatedBooks
+    });
   } catch (error) {
     next(error);
   }

@@ -1,89 +1,76 @@
-# Analyse comparative SQL vs NoSQL
+# Analyse SQL vs NoSQL
 
-## Ce que j'ai appris
+## Complémentarité
 
 ### PostgreSQL (SQL)
-Les données sont structurées et rigides. Chaque utilisateur et livre a exactement les mêmes champs. Impossible d'ajouter des champs sans modifier la structure de la table.
+Structure rigide et cohérente. Les utilisateurs et livres ont tous les mêmes champs. Garantit l'unicité de l'email.
 
-**Avantage** : Les données sont cohérentes et fiables.
+Avantage : Données fiables et cohérentes.
 
 ### MongoDB (NoSQL)
-Les profils peuvent avoir des champs différents. Un utilisateur peut avoir 10 genres préférés, un autre aucun. On peut facilement ajouter de nouveaux champs sans casser l'existant.
+Structure flexible. Chaque profil peut avoir des données différentes. L'historique grandit librement.
 
-**Avantage** : Très flexible, facile d'ajouter des fonctionnalités.
+Avantage : Évolution facile sans migration.
 
-## Difficultés rencontrées
+## Difficultés
 
-1. **Gérer deux connexions différentes**
-   - Syntaxe différente entre SQL (`SELECT * FROM`) et MongoDB (`findOne()`)
-   - Deux fichiers de config à gérer
-
-2. **Lier les deux bases**
-   - Le `userId` dans MongoDB fait référence à l'`id` dans PostgreSQL
-   - Pas de vérification automatique, il faut la coder manuellement
-
-3. **Gestion des erreurs**
-   - PostgreSQL et MongoDB retournent des erreurs différentes
-   - Il faut gérer les deux cas dans le code
+1. Deux connexions différentes à gérer
+2. Syntaxes différentes (SQL vs Mongoose)
+3. Lien manuel entre userId MongoDB et id PostgreSQL
+4. Gestion d'erreurs différente selon la base
 
 ## Avantages du modèle hybride
 
-### Séparation claire
-- **SQL** = Données importantes (users, books)
-- **MongoDB** = Données personnalisables (profils, préférences)
+SQL pour les données critiques (users, books).
+NoSQL pour les données flexibles (profils, préférences).
 
-### Flexibilité
-On peut modifier les profils MongoDB sans toucher à la base SQL. Par exemple, ajouter un champ "objectifs de lecture" sans migration SQL.
-
-### Performance
-- PostgreSQL pour les requêtes complexes avec relations
-- MongoDB pour les gros documents et les lectures rapides
+On peut modifier les profils sans toucher à la base SQL.
 
 ## Cas d'usage
 
-| Besoin | Base | Pourquoi |
-|--------|------|----------|
-| Créer un compte | PostgreSQL | Données critiques |
-| Gérer les livres | PostgreSQL | Stock et disponibilité |
-| Historique lecture | MongoDB | Volume et évolution |
-| Préférences | MongoDB | Personnalisable |
+| Besoin | Base | Raison |
+|--------|------|--------|
+| Créer compte | PostgreSQL | Cohérence |
+| Gérer livres | PostgreSQL | Stock |
+| Historique lecture | MongoDB | Volume |
+| Préférences | MongoDB | Flexible |
 
-## Schéma d'architecture
+## Schéma
 
 ```
-      Client (Postman)
-            |
-      Express API
-            |
-    ┌───────┴───────┐
-    |               |
-PostgreSQL      MongoDB
- (SQL)         (NoSQL)
-    |               |
-  users         profiles
-  books
+Client
+  ↓
+Express API
+  ↓
+PostgreSQL + MongoDB
+  ↓
+users, books + profiles
 ```
 
-## Comparaison observée
+## Performance observée
 
-### Latence
-- SQL : ~5-10ms
-- NoSQL : ~3-8ms
-- Route mixte : ~15ms
+SQL : 5-10ms
+NoSQL : 3-8ms
+Mixte : 15ms
 
-### Mise à jour
-- **SQL** : Il faut modifier la structure avec `ALTER TABLE`
-- **NoSQL** : On ajoute directement de nouveaux champs
+## Mise à jour
 
-### Requêtes
-- **SQL** : Très bon pour les JOIN et relations
-- **NoSQL** : Très bon pour les documents imbriqués
+SQL : ALTER TABLE nécessaire
+NoSQL : Ajout direct de champs
 
 ## Conclusion
 
-Le modèle hybride permet de :
-- Garder la rigueur SQL pour les données importantes
-- Avoir la flexibilité NoSQL pour les données personnalisées
-- Optimiser selon les besoins
+Le modèle hybride combine :
+- Rigueur SQL pour données importantes
+- Flexibilité NoSQL pour données personnalisées
 
-C'est utile quand on a des données structurées (users, books) ET des données qui évoluent souvent (profils, préférences).
+Utile quand on a des données structurées ET évolutives.
+
+## Perspectives
+
+1. Authentification JWT
+2. Cache Redis
+3. Tests automatiques
+4. Documentation Swagger
+5. Docker
+6. Monitoring

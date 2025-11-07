@@ -2,8 +2,30 @@ const User = require("../models/user.model");
 
 exports.listUsers = async (req, res, next) => {
   try {
-    const users = await User.findAll();
-    res.status(200).json({ total: users.length, data: users });
+    const { q, page = 1, limit = 10 } = req.query;
+    
+    let users = await User.findAll();
+
+    if (q) {
+      users = users.filter(u => 
+        u.name.toLowerCase().includes(q.toLowerCase()) ||
+        u.email.toLowerCase().includes(q.toLowerCase())
+      );
+    }
+
+    const total = users.length;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, parseInt(limit));
+    const offset = (pageNum - 1) * limitNum;
+    
+    const paginatedUsers = users.slice(offset, offset + limitNum);
+
+    res.status(200).json({
+      page: pageNum,
+      limit: limitNum,
+      total,
+      data: paginatedUsers
+    });
   } catch (error) {
     next(error);
   }

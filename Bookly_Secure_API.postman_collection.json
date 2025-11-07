@@ -1,0 +1,348 @@
+{
+  "info": {
+    "name": "Bookly+ Secure API (JWT + RBAC)",
+    "description": "API sécurisée hybride SQL + NoSQL avec JWT, bcrypt, CORS, rate limiting",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentification",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"token\", jsonData.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Après création, modifie le role en 'admin' dans la BDD PostgreSQL"
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"token\", jsonData.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tests Sécurité",
+      "item": [
+        {
+          "name": "❌ Route protégée SANS token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "1"]
+            }
+          }
+        },
+        {
+          "name": "❌ Token invalide → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer token_invalide_xyz123"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "1"]
+            }
+          }
+        },
+        {
+          "name": "❌ User DELETE book (admin only) → 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/books/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "books", "1"]
+            },
+            "description": "Se connecter en tant que USER puis tenter DELETE → 403"
+          }
+        },
+        {
+          "name": "❌ Validation email invalide → 422",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test\",\n  \"email\": \"invalide_email\",\n  \"password\": \"123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "❌ Rate limit login (spam 11x) → 429",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"wrong\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Répéter cette requête 11 fois → 429 après 10 tentatives"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Books (SQL) - Admin seulement",
+      "item": [
+        {
+          "name": "Liste books (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/books",
+              "host": ["{{base_url}}"],
+              "path": ["api", "books"]
+            }
+          }
+        },
+        {
+          "name": "✅ Créer book (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Le Hobbit\",\n  \"author\": \"J.R.R. Tolkien\",\n  \"available\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/books",
+              "host": ["{{base_url}}"],
+              "path": ["api", "books"]
+            }
+          }
+        },
+        {
+          "name": "✅ Modifier book (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Le Hobbit - Edition Collector\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/books/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "books", "1"]
+            }
+          }
+        },
+        {
+          "name": "✅ Supprimer book (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/books/3",
+              "host": ["{{base_url}}"],
+              "path": ["api", "books", "3"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profiles (MongoDB) - Auth required",
+      "item": [
+        {
+          "name": "✅ Créer profil",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"preferences\": {\n    \"genres\": [\"Fantasy\", \"Drama\"],\n    \"authors\": [\"J.K. Rowling\"]\n  },\n  \"history\": [{\n    \"bookTitle\": \"Harry Potter\",\n    \"rating\": 5\n  }]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"]
+            }
+          }
+        },
+        {
+          "name": "✅ Récupérer profil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "1"]
+            }
+          }
+        },
+        {
+          "name": "✅ Mettre à jour profil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"history\": [{\n    \"bookTitle\": \"Le Seigneur des Anneaux\",\n    \"rating\": 5,\n    \"comment\": \"Excellent\"\n  }]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Route Mixte SQL + NoSQL",
+      "item": [
+        {
+          "name": "User complet (SQL + MongoDB)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user-full/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user-full", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
